@@ -19,10 +19,13 @@ body{
 /* ================= NAVBAR ================= */
 .navbar{
     position:fixed;
-    width:90%;
-    left:5%;
     top:15px;
-    padding:15px 35px;
+    left:0;
+    right:0;
+    margin:auto;
+    width:95%;
+    max-width:1200px;
+    padding:15px 20px;
     border-radius:25px;
     backdrop-filter:blur(16px);
     background:rgba(255,255,255,0.3);
@@ -31,7 +34,6 @@ body{
     justify-content:space-between;
     z-index:1000;
 }
-
 .logo{
     display:flex;
     align-items:center;
@@ -145,14 +147,24 @@ h1{
 }
 
 /* Make About Section More Balanced */
-@media(max-width:992px){
-    .about-container{
+@media(max-width:768px){
+
+    .navbar{
         flex-direction:column;
+        align-items:center;
         text-align:center;
+        gap:10px;
+        padding:15px;
     }
 
-    .about-text{
-        text-align:left;
+    .nav-links{
+        flex-direction:column;
+        gap:12px;
+        margin:10px 0;
+    }
+
+    .nav-social{
+        justify-content:center;
     }
 }
 
