@@ -48,6 +48,14 @@ window.addEventListener('scroll', function() {
     }
 });
 
+/*    RESPONSIVE    */
+
+const toggle = document.getElementById("menu-toggle");
+const menu = document.getElementById("menu-wrapper");
+
+toggle.addEventListener("click", () => {
+    menu.classList.toggle("active");
+});
 
 /* ===== REGISTRATION FORM ===== */
 
