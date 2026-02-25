@@ -51,11 +51,13 @@ window.addEventListener('scroll', function() {
 /*    RESPONSIVE    */
 
 const toggle = document.getElementById("menu-toggle");
-const menu = document.getElementById("menu-wrapper");
+const menu = document.getElementById("nav-menu");
 
-toggle.addEventListener("click", () => {
-    menu.classList.toggle("active");
-});
+if(toggle && menu){
+    toggle.addEventListener("click", () => {
+        menu.classList.toggle("active");
+    });
+}
 
 /* ===== REGISTRATION FORM ===== */
 
