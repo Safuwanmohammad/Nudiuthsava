@@ -152,79 +152,8 @@ h1{
     margin-bottom:8px;
 }
 
-/* Make About Section More Balanced */
-@media(max-width:768px){
 
-    .navbar{
-        flex-direction:row;
-        justify-content:space-between;
-        padding:10px 15px;
-    }
-
-    .menu-toggle{
-        display:block;
-    }
-
-    .nav-menu{
-        position:absolute;
-        top:80px;
-        left:0;
-        width:100%;
-        background:rgba(255,255,255,0.95);
-        border-radius:20px;
-        padding:20px;
-        display:none;
-        flex-direction:column;
-        align-items:center;
-        box-shadow:0 20px 40px rgba(0,0,0,0.2);
-    }
-
-    .nav-menu.active{
-        display:flex;
-    }
-
-    .nav-links{
-        flex-direction:column;
-        gap:15px;
-        margin-bottom:15px;
-    }
-
-    .nav-social{
-        justify-content:center;
-    }
-
-}
-
-/* ================= EVENTS ================= */
-.event-grid{
-    display:grid;
-    grid-template-columns:repeat(auto-fit,minmax(250px,1fr));
-    gap:30px;
-}
-
-.event-box{
-    background:white;
-    border-radius:25px;
-    overflow:hidden;
-    text-align:center;
-    padding-bottom:20px;
-    transition:0.3s;
-}
-
-.event-box:hover{
-    transform:translateY(-10px);
-}
-
-.event-box img{
-    width:100%;
-    height:300px;
-    object-fit:cover;
-    transition:0.5s;
-}
-
-.event-box img:hover{
-    transform:scale(1.1);
-}
+ 
 
 /* ================= SPONSORS ================= */
 .tier-title{
@@ -596,4 +525,41 @@ body{
 
 .thematic-list li{
     margin-bottom:18px;
+}
+/* ===== FINAL MOBILE NAV FIX ===== */
+@media(max-width:768px){
+
+    .menu-toggle{
+        display:block;
+    }
+
+    .nav-menu{
+        display:none !important;   /* FORCE HIDE */
+        position:absolute;
+        top:70px;
+        left:0;
+        width:100%;
+        background:white;
+        border-radius:20px;
+        padding:25px 0;
+        flex-direction:column;
+        align-items:center;
+        gap:20px;
+        box-shadow:0 15px 35px rgba(0,0,0,0.2);
+    }
+
+    .nav-menu.active{
+        display:flex !important;   /* FORCE SHOW */
+    }
+
+    .nav-links{
+        flex-direction:column;
+        gap:18px;
+        align-items:center;
+    }
+
+    .nav-social{
+        margin-top:15px;
+        justify-content:center;
+    }
 }
