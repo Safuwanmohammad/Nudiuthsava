@@ -603,6 +603,15 @@ body{
 }
 /* ===== FINAL MOBILE NAV FIX ===== */
 @media(max-width:768px){
+    .events-container{
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+    }
+    .event-card{
+        width: 90%;
+        margin: 20px auto;
+    }
 
     .menu-toggle{
         display:block;
@@ -637,26 +646,7 @@ body{
         margin-top:15px;
         justify-content:center;
     }
-    /* ===== FIX EVENT IMAGES MOBILE ===== */
-
-    .event-container{
-        width:100%;
-        padding:0 15px;
-    }
-
-    .event-card{
-        width:100%;
-        overflow:hidden;
-        border-radius:10px;
-    }
-
-    .event-card img{
-        width:100%;
-        height:auto;
-        object-fit:cover;
-        display:block;
-        border-radius:10px;
-    }
+    
 }
 
 /* ================= CONTACT FORM ================= */
