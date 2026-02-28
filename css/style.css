@@ -647,7 +647,7 @@ body{
     .event-card{
         width:100%;
         overflow:hidden;
-        border-radius:20px;
+        border-radius:10px;
     }
 
     .event-card img{
@@ -655,7 +655,7 @@ body{
         height:auto;
         object-fit:cover;
         display:block;
-        border-radius:20px;
+        border-radius:10px;
     }
 }
 
