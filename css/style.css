@@ -637,7 +637,28 @@ body{
         margin-top:15px;
         justify-content:center;
     }
+    /* ===== FIX EVENT IMAGES MOBILE ===== */
+
+    .event-container{
+        width:100%;
+        padding:0 15px;
+    }
+
+    .event-card{
+        width:100%;
+        overflow:hidden;
+        border-radius:20px;
+    }
+
+    .event-card img{
+        width:100%;
+        height:auto;
+        object-fit:cover;
+        display:block;
+        border-radius:20px;
+    }
 }
+
 /* ================= CONTACT FORM ================= */
 
 .contact-form {
