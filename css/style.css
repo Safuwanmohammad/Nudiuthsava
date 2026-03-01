@@ -251,13 +251,27 @@ h1{
 }
 /* ================= EVENTS ================= */
 
-.event-grid {
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
-    gap: 30px;
-    padding: 20px 0;
+/* ================= GLOBAL FIX ================= */
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
 }
 
+body {
+    overflow-x: hidden;   /* Prevent horizontal scroll */
+}
+
+/* ================= EVENT GRID ================= */
+.event-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+    gap: 25px;
+    padding: 20px;
+    width: 100%;
+}
+
+/* ================= EVENT CARD ================= */
 .event-box {
     background: #ffffff;
     border-radius: 25px;
@@ -268,6 +282,7 @@ h1{
     transition: all 0.4s ease;
     opacity: 0;
     transform: translateY(40px);
+    width: 100%;
 }
 
 /* Hover Effect */
@@ -276,7 +291,7 @@ h1{
     box-shadow: 0 20px 40px rgba(0,0,0,0.2);
 }
 
-/* Image Styling */
+/* ================= IMAGE ================= */
 .event-box img {
     width: 100%;
     height: 280px;
@@ -288,13 +303,13 @@ h1{
     transform: scale(1.08);
 }
 
-/* Event Title */
+/* ================= TITLE ================= */
 .event-box h3 {
     margin: 15px 0 10px;
     font-size: 20px;
 }
 
-/* Button Styling */
+/* ================= BUTTON ================= */
 .event-box a {
     display: inline-block;
     margin-top: 10px;
@@ -312,16 +327,64 @@ h1{
     transform: scale(1.05);
 }
 
-/* Scroll Animation Active Class */
+/* ================= SCROLL ANIMATION ================= */
 .event-box.show {
     opacity: 1;
     transform: translateY(0);
 }
 
-/* Responsive */
-@media(max-width:768px) {
+/* ================= TABLET VIEW ================= */
+@media (max-width: 992px) {
+    .event-grid {
+        grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+        gap: 20px;
+    }
+
+    .event-box img {
+        height: 240px;
+    }
+}
+
+/* ================= MOBILE VIEW ================= */
+@media (max-width: 768px) {
+
+    .event-grid {
+        grid-template-columns: 1fr;   /* One card per row */
+        padding: 15px;
+        gap: 20px;
+    }
+
+    .event-box {
+        border-radius: 20px;
+    }
+
     .event-box img {
         height: 220px;
+    }
+
+    .event-box h3 {
+        font-size: 18px;
+    }
+
+    .event-box a {
+        padding: 8px 18px;
+        font-size: 13px;
+    }
+}
+
+/* ================= SMALL MOBILE (Extra Fix) ================= */
+@media (max-width: 480px) {
+
+    .event-grid {
+        padding: 12px;
+    }
+
+    .event-box img {
+        height: 200px;
+    }
+
+    .event-box h3 {
+        font-size: 16px;
     }
 }
 
