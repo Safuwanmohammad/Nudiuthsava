@@ -1,0 +1,103 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Vidyarthi Kavighosti Registration</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<link rel="stylesheet" href="../css/style.css">
+</head>
+
+<body>
+<section class="form-section">
+<div class="form-box">
+
+<a href="../index.html" class="back-btn">← Back to Home</a>
+<h1>VIDYARTHI KAVIGHOSTI</h1>
+
+<!-- Added id="registrationForm" -->
+<form id="registrationForm">
+<div class="form-group">
+<label>College Name</label>
+<input type="text" name="collegeName" required>
+</div>
+
+<div class="form-group">
+<label>Principal Name</label>
+<input type="text" name="principalName" required>
+</div>
+
+<div class="form-group">
+<label>Principal Phone Number</label>
+<input type="tel" name="principalPhone" required>
+</div>
+
+<div class="form-group">
+<label>Student Participant's Name</label>
+<input type="text" name="studentName" required>
+</div>
+
+<div class="form-group">
+<label>Student's Phone Number</label>
+<input type="tel" name="studentPhone" required>
+</div>
+
+<div class="form-group">
+<label>Course</label>
+<input type="text" name="course" required>
+</div>
+
+<div class="form-group">
+<label>Semester</label>
+<input type="text" name="semester" required>
+</div>
+
+<div class="form-group">
+<label>Student Register Number</label>
+<input type="text" name="registerNumber" required>
+</div>
+
+<div class="form-group">
+<label>Message (Optional)</label>
+<textarea name="message" rows="4"></textarea>
+</div>
+
+<div class="form-buttons">
+<button type="submit" class="submit-btn">Submit</button>
+<button type="reset" class="reset-btn">Reset</button>
+</div>
+
+<!-- Success message element -->
+<div id="successMessage" class="success" style="display:none;">✅ Registration successful!</div>
+
+</form>
+</div>
+</section>
+<script>
+    document.getElementById('registrationForm').addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const formData = new FormData(e.target);
+        const data = Object.fromEntries(formData.entries());
+        try {
+            const res = await fetch('/api/registrations', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    eventName: 'Vidyarthi Kavighosti', // change per form
+                    formData: data
+                })
+            });
+            if (res.ok) {
+                document.getElementById('successMessage').style.display = 'block';
+                e.target.reset();
+                setTimeout(() => document.getElementById('successMessage').style.display = 'none', 3000);
+            } else {
+                alert('Registration failed');
+            }
+        } catch (err) {
+            console.error(err);
+            alert('Error submitting form');
+        }
+    });
+</script>
+</body>
+</html>
