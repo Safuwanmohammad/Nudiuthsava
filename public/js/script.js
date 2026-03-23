@@ -235,6 +235,7 @@ async function loadHomeImages() {
     }
 }
 
+// ===== MODIFIED FUNCTION: now links to unified register.html with event name =====
 async function loadEvents() {
     console.log('loadEvents() started');
     try {
@@ -254,7 +255,6 @@ async function loadEvents() {
 
         if (events.length === 0) {
             console.log('No dynamic events to display');
-            // Optionally show a message
             container.innerHTML = '<p style="text-align:center;">No additional events at this time.</p>';
             return;
         }
@@ -267,7 +267,7 @@ async function loadEvents() {
             box.innerHTML = `
                 <img src="${imgUrl}" alt="${ev.title}" onerror="this.src='/images/placeholder.png'">
                 <h3>${ev.title}</h3>
-                ${ev.hasForm ? `<a href="${ev.registerPage}" class="btn">Register Now</a>` : ''}
+                ${ev.hasForm ? `<a href="/register.html?event=${encodeURIComponent(ev.title)}" class="btn">Register Now</a>` : ''}
             `;
             container.appendChild(box);
         });

@@ -8,9 +8,16 @@ const session = require("express-session");
 const MongoStore = require("connect-mongo");
 const bcrypt = require("bcrypt");
 const nodemailer = require("nodemailer");
+const { createClient } = require('@supabase/supabase-js');
 require("dotenv").config();
 
 const app = express();
+
+// ====================== SUPABASE INIT ======================
+const supabaseUrl = process.env.SUPABASE_URL;
+const supabaseAnonKey = process.env.SUPABASE_ANON_KEY;
+const supabase = createClient(supabaseUrl, supabaseAnonKey);
+const BUCKET_NAME = process.env.SUPABASE_BUCKET || 'uploads';
 
 // ====================== MIDDLEWARE ======================
 app.use(cors());
@@ -23,16 +30,14 @@ app.use((req, res, next) => {
   next();
 });
 
-// Serve uploads folder (for uploaded images/videos)
-app.use("/uploads", express.static(path.join(__dirname, "uploads")));
-// Serve images folder (static logos, etc.)
+// Serve static folders (images, videos) – these are your local static assets (like logos)
+// Note: We are not serving /uploads anymore because files are on Supabase.
 app.use("/images", express.static(path.join(__dirname, "images")));
-// Serve videos folder
 app.use("/videos", express.static(path.join(__dirname, "videos")));
 
 // ====================== MONGODB CONNECTION ======================
 mongoose
-  .connect(process.env.MONGODB_URI || "mongodb://localhost:27017/nudiutsava")
+  .connect(process.env.MONGODB_URI)
   .then(() => console.log("✅ MongoDB connected"))
   .catch((err) => console.error("❌ MongoDB error:", err));
 
@@ -56,14 +61,19 @@ app.use(
 
 // ====================== NODEMAILER TRANSPORTER ======================
 const transporter = nodemailer.createTransport({
-  service: 'gmail',
+  host: "smtp.gmail.com",
+  port: 587,
+  secure: false,
   auth: {
     user: process.env.EMAIL_USER,
     pass: process.env.EMAIL_PASS,
   },
+  tls: {
+    rejectUnauthorized: false,
+  },
 });
 
-// ====================== SCHEMAS ======================
+// ====================== SCHEMAS (unchanged) ======================
 const adminSchema = new mongoose.Schema({
   username: { type: String, unique: true },
   password: String,
@@ -71,14 +81,14 @@ const adminSchema = new mongoose.Schema({
 const Admin = mongoose.model("Admin", adminSchema);
 
 const homeImageSchema = new mongoose.Schema({
-  imageUrl: String,
+  imageUrl: String,  // will store Supabase public URL
   createdAt: { type: Date, default: Date.now },
 });
 const HomeImage = mongoose.model("HomeImage", homeImageSchema);
 
 const eventSchema = new mongoose.Schema({
   title: String,
-  imageUrl: String,
+  imageUrl: String,  // Supabase URL
   registerPage: String,
   hasForm: Boolean,
   createdAt: { type: Date, default: Date.now },
@@ -87,16 +97,16 @@ const Event = mongoose.model("Event", eventSchema);
 
 const sponsorSchema = new mongoose.Schema({
   title: String,
-  logoUrl: String,
-  coverUrl: String,
-  videoUrl: String,
+  logoUrl: String,   // Supabase URL
+  coverUrl: String,  // Supabase URL
+  videoUrl: String,  // Supabase URL
   createdAt: { type: Date, default: Date.now },
 });
 const Sponsor = mongoose.model("Sponsor", sponsorSchema);
 
 const gallerySchema = new mongoose.Schema({
   title: String,
-  imageUrl: String,
+  imageUrl: String,  // Supabase URL
   createdAt: { type: Date, default: Date.now },
 });
 const Gallery = mongoose.model("Gallery", gallerySchema);
@@ -118,14 +128,35 @@ const contactSchema = new mongoose.Schema({
 });
 const Contact = mongoose.model("Contact", contactSchema);
 
-// ====================== FILE UPLOAD ======================
-const fs = require("fs");
-if (!fs.existsSync("uploads")) fs.mkdirSync("uploads");
-const storage = multer.diskStorage({
-  destination: (req, file, cb) => cb(null, "uploads/"),
-  filename: (req, file, cb) => cb(null, Date.now() + "-" + file.originalname),
-});
+// ====================== FILE UPLOAD CONFIG (Memory Storage) ======================
+const storage = multer.memoryStorage(); // store file in memory as buffer
 const upload = multer({ storage });
+
+// Helper function to upload a file to Supabase and return public URL
+async function uploadFileToSupabase(file, folder = '') {
+  if (!file) return null;
+  const fileName = `${Date.now()}-${file.originalname.replace(/\s+/g, '_')}`;
+  const filePath = folder ? `${folder}/${fileName}` : fileName;
+
+  const { data, error } = await supabase.storage
+    .from(BUCKET_NAME)
+    .upload(filePath, file.buffer, {
+      contentType: file.mimetype,
+      upsert: false,
+    });
+
+  if (error) {
+    console.error('Supabase upload error:', error);
+    throw new Error('File upload failed');
+  }
+
+  // Get public URL
+  const { data: publicUrlData } = supabase.storage
+    .from(BUCKET_NAME)
+    .getPublicUrl(filePath);
+
+  return publicUrlData.publicUrl;
+}
 
 // ====================== AUTH MIDDLEWARE ======================
 function requireAdmin(req, res, next) {
@@ -188,9 +219,14 @@ app.get("/admin/check", (req, res) => {
 
 // ====================== HOME IMAGES ======================
 app.post("/api/home-images", requireAdmin, upload.single("image"), async (req, res) => {
-  const image = new HomeImage({ imageUrl: "/uploads/" + req.file.filename });
-  await image.save();
-  res.json(image);
+  try {
+    const imageUrl = await uploadFileToSupabase(req.file, 'home');
+    const image = new HomeImage({ imageUrl });
+    await image.save();
+    res.json(image);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
 });
 
 app.get("/api/home-images", async (req, res) => {
@@ -201,8 +237,8 @@ app.get("/api/home-images", async (req, res) => {
 app.put("/api/home-images/:id", requireAdmin, upload.single("image"), async (req, res) => {
   try {
     if (!req.file) return res.status(400).json({ error: "No image file provided" });
-    const updateData = { imageUrl: "/uploads/" + req.file.filename };
-    const image = await HomeImage.findByIdAndUpdate(req.params.id, updateData, { new: true });
+    const imageUrl = await uploadFileToSupabase(req.file, 'home');
+    const image = await HomeImage.findByIdAndUpdate(req.params.id, { imageUrl }, { new: true });
     res.json(image);
   } catch (err) {
     res.status(500).json({ error: err.message });
@@ -216,15 +252,23 @@ app.delete("/api/home-images/:id", requireAdmin, async (req, res) => {
 
 // ====================== EVENTS ======================
 app.post("/api/events", requireAdmin, upload.single("image"), async (req, res) => {
-  const { title, registerPage, hasForm } = req.body;
-  const event = new Event({
-    title,
-    registerPage,
-    hasForm: hasForm === "true",
-    imageUrl: req.file ? "/uploads/" + req.file.filename : null,
-  });
-  await event.save();
-  res.json(event);
+  try {
+    const { title, hasForm } = req.body;
+    let imageUrl = null;
+    if (req.file) {
+      imageUrl = await uploadFileToSupabase(req.file, 'events');
+    }
+    const event = new Event({
+      title,
+      registerPage: "",
+      hasForm: hasForm === "true",
+      imageUrl,
+    });
+    await event.save();
+    res.json(event);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
 });
 
 app.get("/api/events", async (req, res) => {
@@ -234,9 +278,11 @@ app.get("/api/events", async (req, res) => {
 
 app.put("/api/events/:id", requireAdmin, upload.single("image"), async (req, res) => {
   try {
-    const { title, registerPage, hasForm } = req.body;
-    const updateData = { title, registerPage, hasForm: hasForm === "true" };
-    if (req.file) updateData.imageUrl = "/uploads/" + req.file.filename;
+    const { title, hasForm } = req.body;
+    const updateData = { title, hasForm: hasForm === "true" };
+    if (req.file) {
+      updateData.imageUrl = await uploadFileToSupabase(req.file, 'events');
+    }
     const event = await Event.findByIdAndUpdate(req.params.id, updateData, { new: true });
     res.json(event);
   } catch (err) {
@@ -259,15 +305,23 @@ app.post(
     { name: "video", maxCount: 1 },
   ]),
   async (req, res) => {
-    const files = req.files;
-    const sponsor = new Sponsor({
-      title: req.body.title,
-      logoUrl: files.logo ? "/uploads/" + files.logo[0].filename : null,
-      coverUrl: files.cover ? "/uploads/" + files.cover[0].filename : null,
-      videoUrl: files.video ? "/uploads/" + files.video[0].filename : null,
-    });
-    await sponsor.save();
-    res.json(sponsor);
+    try {
+      const files = req.files;
+      const logoUrl = files.logo ? await uploadFileToSupabase(files.logo[0], 'sponsors/logos') : null;
+      const coverUrl = files.cover ? await uploadFileToSupabase(files.cover[0], 'sponsors/covers') : null;
+      const videoUrl = files.video ? await uploadFileToSupabase(files.video[0], 'sponsors/videos') : null;
+
+      const sponsor = new Sponsor({
+        title: req.body.title,
+        logoUrl,
+        coverUrl,
+        videoUrl,
+      });
+      await sponsor.save();
+      res.json(sponsor);
+    } catch (err) {
+      res.status(500).json({ error: err.message });
+    }
   }
 );
 
@@ -286,11 +340,12 @@ app.put(
   ]),
   async (req, res) => {
     try {
-      const files = req.files;
       const updateData = { title: req.body.title };
-      if (files.logo) updateData.logoUrl = "/uploads/" + files.logo[0].filename;
-      if (files.cover) updateData.coverUrl = "/uploads/" + files.cover[0].filename;
-      if (files.video) updateData.videoUrl = "/uploads/" + files.video[0].filename;
+      const files = req.files;
+      if (files.logo) updateData.logoUrl = await uploadFileToSupabase(files.logo[0], 'sponsors/logos');
+      if (files.cover) updateData.coverUrl = await uploadFileToSupabase(files.cover[0], 'sponsors/covers');
+      if (files.video) updateData.videoUrl = await uploadFileToSupabase(files.video[0], 'sponsors/videos');
+
       const sponsor = await Sponsor.findByIdAndUpdate(req.params.id, updateData, { new: true });
       res.json(sponsor);
     } catch (err) {
@@ -306,12 +361,17 @@ app.delete("/api/sponsors/:id", requireAdmin, async (req, res) => {
 
 // ====================== GALLERY ======================
 app.post("/api/gallery", requireAdmin, upload.single("image"), async (req, res) => {
-  const gallery = new Gallery({
-    title: req.body.title,
-    imageUrl: "/uploads/" + req.file.filename,
-  });
-  await gallery.save();
-  res.json(gallery);
+  try {
+    const imageUrl = await uploadFileToSupabase(req.file, 'gallery');
+    const gallery = new Gallery({
+      title: req.body.title,
+      imageUrl,
+    });
+    await gallery.save();
+    res.json(gallery);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
 });
 
 app.get("/api/gallery", async (req, res) => {
@@ -322,7 +382,9 @@ app.get("/api/gallery", async (req, res) => {
 app.put("/api/gallery/:id", requireAdmin, upload.single("image"), async (req, res) => {
   try {
     const updateData = { title: req.body.title };
-    if (req.file) updateData.imageUrl = "/uploads/" + req.file.filename;
+    if (req.file) {
+      updateData.imageUrl = await uploadFileToSupabase(req.file, 'gallery');
+    }
     const gallery = await Gallery.findByIdAndUpdate(req.params.id, updateData, { new: true });
     res.json(gallery);
   } catch (err) {
@@ -335,7 +397,7 @@ app.delete("/api/gallery/:id", requireAdmin, async (req, res) => {
   res.json({ message: "Deleted" });
 });
 
-// ====================== REGISTRATIONS ======================
+// ====================== REGISTRATIONS (unchanged) ======================
 app.post("/api/registrations", async (req, res) => {
   const reg = new Registration({
     eventName: req.body.eventName,
@@ -355,7 +417,7 @@ app.delete("/api/registrations/:id", requireAdmin, async (req, res) => {
   res.json({ message: "Deleted" });
 });
 
-// ====================== CONTACT ======================
+// ====================== CONTACT (unchanged) ======================
 app.post("/api/contact", async (req, res) => {
   try {
     const contact = new Contact(req.body);
@@ -377,8 +439,11 @@ Message: ${req.body.message}
     await transporter.sendMail(mailOptions);
     res.json({ message: "Message saved and email sent" });
   } catch (err) {
-    console.error("Contact error:", err);
-    res.status(500).json({ error: "Failed to process contact form" });
+    console.error("❌ Contact error:", err);
+    res.status(500).json({ 
+      error: "Failed to process contact form", 
+      details: err.message
+    });
   }
 });
 

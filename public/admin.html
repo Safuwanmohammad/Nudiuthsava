@@ -392,9 +392,6 @@
                     <label><input type="radio" name="editFormToggle" value="yes"> Yes</label>
                     <label><input type="radio" name="editFormToggle" value="no"> No</label>
                 </div>
-                <div class="form-row">
-                    <div class="form-group"><label>Registration link</label><input type="text" id="editEventLink"></div>
-                </div>
                 <button class="submit-btn" onclick="saveEventEdit()">Update Event</button>
             </div>
             <div id="eventFormContainer" class="create-form hidden">
@@ -408,10 +405,7 @@
                     <label><input type="radio" name="formToggle" value="yes" checked> Yes</label>
                     <label><input type="radio" name="formToggle" value="no"> No</label>
                 </div>
-                <div class="form-row">
-                    <div class="form-group"><label>Registration link / page</label><input type="text" id="eventLink" placeholder="forms/nudi-nruthya.html"></div>
-                    <button class="submit-btn" onclick="createNewEvent()">Save Event</button>
-                </div>
+                <button class="submit-btn" onclick="createNewEvent()">Save Event</button>
             </div>
         </div>
 
@@ -626,11 +620,9 @@ async function createNewEvent(){
         return;
     }
     const file = document.getElementById("eventImage").files[0];
-    const registerPage = document.getElementById("eventLink").value.trim();
     const hasForm = document.querySelector('input[name="formToggle"]:checked').value === "yes";
     const formData = new FormData();
     formData.append("title", title);
-    formData.append("registerPage", registerPage);
     formData.append("hasForm", hasForm);
     if(file) formData.append("image", file);
 
@@ -645,7 +637,6 @@ async function createNewEvent(){
         // Reset form
         document.getElementById("eventName").value = '';
         document.getElementById("eventImage").value = '';
-        document.getElementById("eventLink").value = '';
         document.getElementById("eventFormContainer").classList.add("hidden");
     } catch (err) {
         alert('Error: ' + err.message);
@@ -671,7 +662,6 @@ async function editEvent(id){
     const events = await res.json();
     const event = events.find(e => e._id === id);
     document.getElementById("editEventName").value = event.title;
-    document.getElementById("editEventLink").value = event.registerPage || '';
     // Set radio buttons
     document.querySelectorAll('input[name="editFormToggle"]').forEach(r => {
         if((r.value === 'yes' && event.hasForm) || (r.value === 'no' && !event.hasForm)) r.checked = true;
@@ -687,7 +677,6 @@ async function saveEventEdit(){
     }
     const formData = new FormData();
     formData.append("title", title);
-    formData.append("registerPage", document.getElementById("editEventLink").value);
     const hasForm = document.querySelector('input[name="editFormToggle"]:checked').value === "yes";
     formData.append("hasForm", hasForm);
     const file = document.getElementById("editEventImage").files[0];
