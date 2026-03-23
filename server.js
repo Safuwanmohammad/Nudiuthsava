@@ -37,7 +37,9 @@ app.use("/videos", express.static(path.join(__dirname, "videos")));
 
 // ====================== MONGODB CONNECTION ======================
 mongoose
-  .connect(process.env.MONGODB_URI)
+  .connect(process.env.MONGODB_URI, {
+    family: 4, // Force IPv4 – fixes DNS issues on some networks
+  })
   .then(() => console.log("✅ MongoDB connected"))
   .catch((err) => console.error("❌ MongoDB error:", err));
 
@@ -456,7 +458,14 @@ app.get("/api/contact", async (req, res) => {
 app.use(express.static(path.join(__dirname, "public")));
 
 // ====================== SERVER ======================
-const PORT = process.env.PORT || 5000;
-app.listen(PORT, () => {
-  console.log(`🚀 Server running on http://localhost:${PORT}`);
-});
+// For local development, listen on a port.
+// In production (Vercel), the app is exported as a serverless function.
+if (process.env.NODE_ENV !== 'production') {
+  const PORT = process.env.PORT || 5000;
+  app.listen(PORT, () => {
+    console.log(`🚀 Server running on http://localhost:${PORT}`);
+  });
+}
+
+// Export the app for Vercel (serverless functions)
+module.exports = app;
