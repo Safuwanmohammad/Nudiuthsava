@@ -14,9 +14,20 @@ window.addEventListener('scroll', function () {
 /* ===== RESPONSIVE MENU ===== */
 const toggle = document.getElementById("menu-toggle");
 const menu = document.getElementById("nav-menu");
+
 if (toggle && menu) {
     toggle.addEventListener("click", () => {
         menu.classList.toggle("active");
+    });
+
+    // Close menu when any nav link is clicked
+    const navLinks = document.querySelectorAll('.nav-links a');
+    navLinks.forEach(link => {
+        link.addEventListener('click', () => {
+            if (menu.classList.contains('active')) {
+                menu.classList.remove('active');
+            }
+        });
     });
 }
 
