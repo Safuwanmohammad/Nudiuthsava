@@ -7,6 +7,21 @@
     <link rel="stylesheet" href="css/style.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@600;700&family=Poppins:wght@300;400;500;600&display=swap" rel="stylesheet">
+    <style>
+        .small-btn {
+            margin-top: 5px;
+            padding: 6px 12px;
+            background: #8E0000;
+            color: white;
+            border: none;
+            border-radius: 20px;
+            cursor: pointer;
+        }
+        .info-message {
+            font-size: 0.8rem;
+            margin-top: 5px;
+        }
+    </style>
 </head>
 <body>
     <section class="form-section">
@@ -21,7 +36,20 @@
                     <input type="text" name="studentName" required>
                 </div>
 
-                <!-- Student Phone -->
+                <!-- Student Email with OTP -->
+                <div class="form-group">
+                    <label>Student's Email *</label>
+                    <input type="email" name="studentEmail" id="studentEmail" required>
+                    <button type="button" id="sendOtpBtn" class="small-btn">Send OTP</button>
+                    <div id="otpSection" style="display:none;">
+                        <label>Enter OTP *</label>
+                        <input type="text" id="otpInput" required>
+                        <button type="button" id="verifyOtpBtn" class="small-btn">Verify OTP</button>
+                    </div>
+                    <div id="otpMessage" class="info-message"></div>
+                </div>
+
+                <!-- Student Phone (no OTP) -->
                 <div class="form-group">
                     <label>Student's Phone Number *</label>
                     <input type="tel" name="studentPhone" required>
@@ -89,7 +117,10 @@
     </section>
 
     <script>
-        // Fetch all events from the API and populate the dropdown
+        let otpVerified = false;
+        let userEmail = '';
+
+        // Fetch events for dropdown
         async function loadEventsForDropdown() {
             try {
                 const res = await fetch('/api/events');
@@ -99,19 +130,17 @@
                 select.innerHTML = '<option value="">-- Select an event --</option>';
                 events.forEach(ev => {
                     const option = document.createElement('option');
-                    option.value = ev.title;          // we use title as value
+                    option.value = ev.title;
                     option.textContent = ev.title;
                     select.appendChild(option);
                 });
 
-                // Pre-select event if passed in URL ?event=...
                 const urlParams = new URLSearchParams(window.location.search);
                 const preselected = urlParams.get('event');
                 if (preselected) {
                     const option = Array.from(select.options).find(opt => opt.value === preselected);
                     if (option) {
                         option.selected = true;
-                        // Trigger change event to show/hide participants field
                         select.dispatchEvent(new Event('change'));
                     }
                 }
@@ -122,7 +151,6 @@
             }
         }
 
-        // Show/hide the participants field based on selected event
         function handleEventChange() {
             const select = document.getElementById('eventSelect');
             const selected = select.value;
@@ -135,20 +163,72 @@
             } else {
                 participantsDiv.style.display = 'none';
                 participantsInput.required = false;
-                participantsInput.value = ''; // clear any previous value
+                participantsInput.value = '';
             }
         }
 
-        // Handle form submission
+        // OTP handlers
+        document.getElementById('sendOtpBtn').addEventListener('click', async () => {
+            const email = document.getElementById('studentEmail').value.trim();
+            if (!email) {
+                alert('Please enter email address');
+                return;
+            }
+            userEmail = email;
+            try {
+                const res = await fetch('/api/send-otp', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ email })
+                });
+                if (res.ok) {
+                    document.getElementById('otpSection').style.display = 'block';
+                    document.getElementById('otpMessage').innerHTML = 'OTP sent to your email!';
+                } else {
+                    alert('Failed to send OTP');
+                }
+            } catch (err) {
+                console.error(err);
+                alert('Error sending OTP');
+            }
+        });
+
+        document.getElementById('verifyOtpBtn').addEventListener('click', async () => {
+            const otp = document.getElementById('otpInput').value.trim();
+            if (!otp) {
+                alert('Enter OTP');
+                return;
+            }
+            try {
+                const res = await fetch('/api/verify-otp', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ email: userEmail, otp })
+                });
+                if (res.ok) {
+                    otpVerified = true;
+                    document.getElementById('otpMessage').innerHTML = '<span style="color:green;">✔ Verified</span>';
+                    document.getElementById('verifyOtpBtn').disabled = true;
+                } else {
+                    const data = await res.json();
+                    alert(data.error || 'Verification failed');
+                }
+            } catch (err) {
+                console.error(err);
+                alert('Error verifying OTP');
+            }
+        });
+
+        // Form submission with OTP check
         document.getElementById('registrationForm').addEventListener('submit', async (e) => {
             e.preventDefault();
+            if (!otpVerified) {
+                alert('Please verify your email with OTP first.');
+                return;
+            }
+
             const formData = new FormData(e.target);
             const data = Object.fromEntries(formData.entries());
-
-            // Remove participants field if it was hidden (browser might still send it)
-            if (data.eventName !== 'Nudi Nruthya Sambhrama') {
-                delete data.participants;
-            }
 
             // Basic validation for participants range
             if (data.eventName === 'Nudi Nruthya Sambhrama') {
@@ -172,8 +252,12 @@
                 if (res.ok) {
                     document.getElementById('successMessage').style.display = 'block';
                     e.target.reset();
-                    // Hide participants field again after reset
                     document.getElementById('participantsField').style.display = 'none';
+                    // Reset OTP state
+                    otpVerified = false;
+                    document.getElementById('otpSection').style.display = 'none';
+                    document.getElementById('otpMessage').innerHTML = '';
+                    document.getElementById('verifyOtpBtn').disabled = false;
                     setTimeout(() => {
                         document.getElementById('successMessage').style.display = 'none';
                     }, 3000);
@@ -187,10 +271,7 @@
             }
         });
 
-        // Set up event listener for dropdown change
         document.getElementById('eventSelect').addEventListener('change', handleEventChange);
-
-        // Initial load
         loadEventsForDropdown();
     </script>
 </body>

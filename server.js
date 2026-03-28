@@ -30,16 +30,12 @@ app.use((req, res, next) => {
   next();
 });
 
-// Serve static folders (images, videos) – these are your local static assets (like logos)
-// Note: We are not serving /uploads anymore because files are on Supabase.
-app.use("/images", express.static(path.join(__dirname, "images")));
-app.use("/videos", express.static(path.join(__dirname, "videos")));
+// Serve static files from the 'public' folder (images, videos, CSS, JS)
+app.use(express.static(path.join(__dirname, "public")));
 
 // ====================== MONGODB CONNECTION ======================
 mongoose
-  .connect(process.env.MONGODB_URI, {
-    family: 4, // Force IPv4 – fixes DNS issues on some networks
-  })
+  .connect(process.env.MONGODB_URI, { family: 4 })
   .then(() => console.log("✅ MongoDB connected"))
   .catch((err) => console.error("❌ MongoDB error:", err));
 
@@ -49,9 +45,7 @@ app.use(
     secret: process.env.SESSION_SECRET || "super-secret-key",
     resave: false,
     saveUninitialized: false,
-    store: MongoStore.create({
-      client: mongoose.connection.getClient(),
-    }),
+    store: MongoStore.create({ client: mongoose.connection.getClient() }),
     cookie: {
       maxAge: 1000 * 60 * 60 * 24,
       httpOnly: true,
@@ -70,12 +64,10 @@ const transporter = nodemailer.createTransport({
     user: process.env.EMAIL_USER,
     pass: process.env.EMAIL_PASS,
   },
-  tls: {
-    rejectUnauthorized: false,
-  },
+  tls: { rejectUnauthorized: false },
 });
 
-// ====================== SCHEMAS (unchanged) ======================
+// ====================== SCHEMAS ======================
 const adminSchema = new mongoose.Schema({
   username: { type: String, unique: true },
   password: String,
@@ -83,14 +75,14 @@ const adminSchema = new mongoose.Schema({
 const Admin = mongoose.model("Admin", adminSchema);
 
 const homeImageSchema = new mongoose.Schema({
-  imageUrl: String,  // will store Supabase public URL
+  imageUrl: String,
   createdAt: { type: Date, default: Date.now },
 });
 const HomeImage = mongoose.model("HomeImage", homeImageSchema);
 
 const eventSchema = new mongoose.Schema({
   title: String,
-  imageUrl: String,  // Supabase URL
+  imageUrl: String,
   registerPage: String,
   hasForm: Boolean,
   createdAt: { type: Date, default: Date.now },
@@ -99,25 +91,27 @@ const Event = mongoose.model("Event", eventSchema);
 
 const sponsorSchema = new mongoose.Schema({
   title: String,
-  logoUrl: String,   // Supabase URL
-  coverUrl: String,  // Supabase URL
-  videoUrl: String,  // Supabase URL
+  logoUrl: String,
+  coverUrl: String,
+  videoUrl: String,
   createdAt: { type: Date, default: Date.now },
 });
 const Sponsor = mongoose.model("Sponsor", sponsorSchema);
 
 const gallerySchema = new mongoose.Schema({
   title: String,
-  imageUrl: String,  // Supabase URL
+  imageUrl: String,
   createdAt: { type: Date, default: Date.now },
 });
 const Gallery = mongoose.model("Gallery", gallerySchema);
 
 const registrationSchema = new mongoose.Schema({
   eventName: String,
+  email: String,
   formData: mongoose.Schema.Types.Mixed,
   createdAt: { type: Date, default: Date.now },
 });
+registrationSchema.index({ eventName: 1, email: 1 }, { unique: true });
 const Registration = mongoose.model("Registration", registrationSchema);
 
 const contactSchema = new mongoose.Schema({
@@ -130,11 +124,17 @@ const contactSchema = new mongoose.Schema({
 });
 const Contact = mongoose.model("Contact", contactSchema);
 
-// ====================== FILE UPLOAD CONFIG (Memory Storage) ======================
-const storage = multer.memoryStorage(); // store file in memory as buffer
+const otpSchema = new mongoose.Schema({
+  email: String,
+  otp: String,
+  expiresAt: { type: Date, default: () => Date.now() + 5 * 60 * 1000 },
+});
+const Otp = mongoose.model("Otp", otpSchema);
+
+// ====================== FILE UPLOAD ======================
+const storage = multer.memoryStorage();
 const upload = multer({ storage });
 
-// Helper function to upload a file to Supabase and return public URL
 async function uploadFileToSupabase(file, folder = '') {
   if (!file) return null;
   const fileName = `${Date.now()}-${file.originalname.replace(/\s+/g, '_')}`;
@@ -142,21 +142,14 @@ async function uploadFileToSupabase(file, folder = '') {
 
   const { data, error } = await supabase.storage
     .from(BUCKET_NAME)
-    .upload(filePath, file.buffer, {
-      contentType: file.mimetype,
-      upsert: false,
-    });
+    .upload(filePath, file.buffer, { contentType: file.mimetype, upsert: false });
 
   if (error) {
     console.error('Supabase upload error:', error);
     throw new Error('File upload failed');
   }
 
-  // Get public URL
-  const { data: publicUrlData } = supabase.storage
-    .from(BUCKET_NAME)
-    .getPublicUrl(filePath);
-
+  const { data: publicUrlData } = supabase.storage.from(BUCKET_NAME).getPublicUrl(filePath);
   return publicUrlData.publicUrl;
 }
 
@@ -199,9 +192,7 @@ app.post("/admin/login", async (req, res) => {
     const match = await bcrypt.compare(password, admin.password);
     if (!match) return res.status(401).json({ error: "Invalid credentials" });
     req.session.adminId = admin._id;
-    req.session.save(() => {
-      res.json({ success: true, redirect: "/dashboard" });
-    });
+    req.session.save(() => res.json({ success: true, redirect: "/dashboard" }));
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
@@ -257,15 +248,8 @@ app.post("/api/events", requireAdmin, upload.single("image"), async (req, res) =
   try {
     const { title, hasForm } = req.body;
     let imageUrl = null;
-    if (req.file) {
-      imageUrl = await uploadFileToSupabase(req.file, 'events');
-    }
-    const event = new Event({
-      title,
-      registerPage: "",
-      hasForm: hasForm === "true",
-      imageUrl,
-    });
+    if (req.file) imageUrl = await uploadFileToSupabase(req.file, 'events');
+    const event = new Event({ title, registerPage: "", hasForm: hasForm === "true", imageUrl });
     await event.save();
     res.json(event);
   } catch (err) {
@@ -282,9 +266,7 @@ app.put("/api/events/:id", requireAdmin, upload.single("image"), async (req, res
   try {
     const { title, hasForm } = req.body;
     const updateData = { title, hasForm: hasForm === "true" };
-    if (req.file) {
-      updateData.imageUrl = await uploadFileToSupabase(req.file, 'events');
-    }
+    if (req.file) updateData.imageUrl = await uploadFileToSupabase(req.file, 'events');
     const event = await Event.findByIdAndUpdate(req.params.id, updateData, { new: true });
     res.json(event);
   } catch (err) {
@@ -298,27 +280,15 @@ app.delete("/api/events/:id", requireAdmin, async (req, res) => {
 });
 
 // ====================== SPONSORS ======================
-app.post(
-  "/api/sponsors",
-  requireAdmin,
-  upload.fields([
-    { name: "logo", maxCount: 1 },
-    { name: "cover", maxCount: 1 },
-    { name: "video", maxCount: 1 },
-  ]),
+app.post("/api/sponsors", requireAdmin,
+  upload.fields([{ name: "logo", maxCount: 1 }, { name: "cover", maxCount: 1 }, { name: "video", maxCount: 1 }]),
   async (req, res) => {
     try {
       const files = req.files;
       const logoUrl = files.logo ? await uploadFileToSupabase(files.logo[0], 'sponsors/logos') : null;
       const coverUrl = files.cover ? await uploadFileToSupabase(files.cover[0], 'sponsors/covers') : null;
       const videoUrl = files.video ? await uploadFileToSupabase(files.video[0], 'sponsors/videos') : null;
-
-      const sponsor = new Sponsor({
-        title: req.body.title,
-        logoUrl,
-        coverUrl,
-        videoUrl,
-      });
+      const sponsor = new Sponsor({ title: req.body.title, logoUrl, coverUrl, videoUrl });
       await sponsor.save();
       res.json(sponsor);
     } catch (err) {
@@ -332,14 +302,8 @@ app.get("/api/sponsors", async (req, res) => {
   res.json(sponsors);
 });
 
-app.put(
-  "/api/sponsors/:id",
-  requireAdmin,
-  upload.fields([
-    { name: "logo", maxCount: 1 },
-    { name: "cover", maxCount: 1 },
-    { name: "video", maxCount: 1 },
-  ]),
+app.put("/api/sponsors/:id", requireAdmin,
+  upload.fields([{ name: "logo", maxCount: 1 }, { name: "cover", maxCount: 1 }, { name: "video", maxCount: 1 }]),
   async (req, res) => {
     try {
       const updateData = { title: req.body.title };
@@ -347,7 +311,6 @@ app.put(
       if (files.logo) updateData.logoUrl = await uploadFileToSupabase(files.logo[0], 'sponsors/logos');
       if (files.cover) updateData.coverUrl = await uploadFileToSupabase(files.cover[0], 'sponsors/covers');
       if (files.video) updateData.videoUrl = await uploadFileToSupabase(files.video[0], 'sponsors/videos');
-
       const sponsor = await Sponsor.findByIdAndUpdate(req.params.id, updateData, { new: true });
       res.json(sponsor);
     } catch (err) {
@@ -365,10 +328,7 @@ app.delete("/api/sponsors/:id", requireAdmin, async (req, res) => {
 app.post("/api/gallery", requireAdmin, upload.single("image"), async (req, res) => {
   try {
     const imageUrl = await uploadFileToSupabase(req.file, 'gallery');
-    const gallery = new Gallery({
-      title: req.body.title,
-      imageUrl,
-    });
+    const gallery = new Gallery({ title: req.body.title, imageUrl });
     await gallery.save();
     res.json(gallery);
   } catch (err) {
@@ -384,9 +344,7 @@ app.get("/api/gallery", async (req, res) => {
 app.put("/api/gallery/:id", requireAdmin, upload.single("image"), async (req, res) => {
   try {
     const updateData = { title: req.body.title };
-    if (req.file) {
-      updateData.imageUrl = await uploadFileToSupabase(req.file, 'gallery');
-    }
+    if (req.file) updateData.imageUrl = await uploadFileToSupabase(req.file, 'gallery');
     const gallery = await Gallery.findByIdAndUpdate(req.params.id, updateData, { new: true });
     res.json(gallery);
   } catch (err) {
@@ -399,12 +357,76 @@ app.delete("/api/gallery/:id", requireAdmin, async (req, res) => {
   res.json({ message: "Deleted" });
 });
 
-// ====================== REGISTRATIONS (unchanged) ======================
+// ====================== OTP ENDPOINTS (Email) ======================
+function generateOTP() {
+  return Math.floor(100000 + Math.random() * 900000).toString();
+}
+
+app.post("/api/send-otp", async (req, res) => {
+  const { email } = req.body;
+  if (!email) return res.status(400).json({ error: "Email address required" });
+
+  await Otp.deleteMany({ email });
+
+  const otp = generateOTP();
+  const newOtp = new Otp({ email, otp });
+  await newOtp.save();
+
+  console.log(`OTP for ${email}: ${otp}`);
+
+  try {
+    const mailOptions = {
+      from: process.env.EMAIL_USER,
+      to: email,
+      subject: "Your OTP for Nudi Utsava Registration",
+      text: `Your OTP is: ${otp}. It expires in 5 minutes.`,
+    };
+    await transporter.sendMail(mailOptions);
+    res.json({ message: "OTP sent to your email" });
+  } catch (err) {
+    console.error("Email sending failed:", err);
+    res.json({ message: "OTP sent (check console for demo mode)" });
+  }
+});
+
+app.post("/api/verify-otp", async (req, res) => {
+  const { email, otp } = req.body;
+  if (!email || !otp) return res.status(400).json({ error: "Email and OTP required" });
+
+  const record = await Otp.findOne({ email, otp });
+  if (!record || record.expiresAt < new Date()) {
+    return res.status(400).json({ error: "Invalid or expired OTP" });
+  }
+
+  req.session.verifiedEmail = email;
+  res.json({ success: true });
+});
+
+// ====================== REGISTRATIONS ======================
 app.post("/api/registrations", async (req, res) => {
-  const reg = new Registration({
-    eventName: req.body.eventName,
-    formData: req.body.formData,
+  const { eventName, formData } = req.body;
+
+  if (!req.session.verifiedEmail || req.session.verifiedEmail !== formData.studentEmail) {
+    return res.status(403).json({ error: "Email not verified via OTP" });
+  }
+
+  const existing = await Registration.findOne({
+    eventName: eventName,
+    email: formData.studentEmail
   });
+
+  if (existing) {
+    return res.status(409).json({ error: "This email is already registered for this event." });
+  }
+
+  delete req.session.verifiedEmail;
+
+  const reg = new Registration({
+    eventName,
+    email: formData.studentEmail,
+    formData
+  });
+
   await reg.save();
   res.json(reg);
 });
@@ -419,7 +441,7 @@ app.delete("/api/registrations/:id", requireAdmin, async (req, res) => {
   res.json({ message: "Deleted" });
 });
 
-// ====================== CONTACT (unchanged) ======================
+// ====================== CONTACT ======================
 app.post("/api/contact", async (req, res) => {
   try {
     const contact = new Contact(req.body);
@@ -437,15 +459,11 @@ Subject: ${req.body.subject}
 Message: ${req.body.message}
       `,
     };
-
     await transporter.sendMail(mailOptions);
     res.json({ message: "Message saved and email sent" });
   } catch (err) {
     console.error("❌ Contact error:", err);
-    res.status(500).json({ 
-      error: "Failed to process contact form", 
-      details: err.message
-    });
+    res.status(500).json({ error: "Failed to process contact form", details: err.message });
   }
 });
 
@@ -454,18 +472,10 @@ app.get("/api/contact", async (req, res) => {
   res.json(messages);
 });
 
-// ====================== STATIC FILES ======================
-app.use(express.static(path.join(__dirname, "public")));
-
 // ====================== SERVER ======================
-// For local development, listen on a port.
-// In production (Vercel), the app is exported as a serverless function.
-if (process.env.NODE_ENV !== 'production') {
-  const PORT = process.env.PORT || 5000;
-  app.listen(PORT, () => {
-    console.log(`🚀 Server running on http://localhost:${PORT}`);
-  });
-}
+const PORT = process.env.PORT || 5000;
+app.listen(PORT, '0.0.0.0', () => {
+  console.log(`🚀 Server running on port ${PORT}`);
+});
 
-// Export the app for Vercel (serverless functions)
 module.exports = app;

@@ -296,6 +296,21 @@
             border-bottom: 2px solid #ffb74d;
             padding-bottom: 8px;
         }
+        .print-event-btn {
+            background: #28a745;
+            border: none;
+            color: white;
+            font-weight: 600;
+            padding: 5px 12px;
+            border-radius: 20px;
+            font-size: 0.8rem;
+            cursor: pointer;
+            margin-left: 15px;
+            transition: 0.2s;
+        }
+        .print-event-btn:hover {
+            background: #218838;
+        }
         .registrations-table {
             width: 100%;
             border-collapse: collapse;
@@ -473,7 +488,7 @@
             <div class="section-header">
                 <h1>📋 Registered Users</h1>
                 <div>
-                    <button class="submit-btn print-btn" onclick="printRegistrations()"><i class="fas fa-print"></i> Print</button>
+                    <button class="submit-btn print-btn" onclick="printRegistrations()"><i class="fas fa-print"></i> Print All</button>
                 </div>
             </div>
             <div class="search-bar">
@@ -506,7 +521,6 @@ function showTab(tabId){
     document.querySelectorAll(".tab-content").forEach(tab => tab.classList.remove("active"));
     document.querySelectorAll(".tab-btn").forEach(btn => btn.classList.remove("active"));
     document.getElementById(tabId).classList.add("active");
-    // Find the clicked button and add active class
     const activeBtn = Array.from(document.querySelectorAll(".tab-btn")).find(btn => btn.getAttribute('onclick')?.includes(tabId));
     if(activeBtn) activeBtn.classList.add("active");
 
@@ -906,7 +920,9 @@ function renderRegistrations(registrations) {
         const regs = groups[eventName];
         html += `
             <div class="event-group">
-                <h2>${eventName} (${regs.length})</h2>
+                <h2>${eventName} (${regs.length})
+                    <button class="print-event-btn" onclick="printEventRegistrations('${eventName}')">Print this event</button>
+                </h2>
                 <table class="registrations-table">
                     <thead>
                         <tr>
@@ -928,7 +944,9 @@ function renderRegistrations(registrations) {
                 </tr>
             `;
         });
-        html += `</tbody></table></div>`;
+        html += `</tbody>
+                </table>
+            </div>`;
     }
     container.innerHTML = html;
 }
@@ -949,12 +967,12 @@ async function deleteRegistration(id) {
 function printRegistrations() {
     const printContents = document.getElementById('registrationsContainer').innerHTML;
     const originalTitle = document.title;
-    document.title = 'Registrations - Nudi Utsava';
+    document.title = 'All Registrations - Nudi Utsava';
     const printWindow = window.open('', '_blank');
     printWindow.document.write(`
         <html>
             <head>
-                <title>Registrations</title>
+                <title>All Registrations</title>
                 <style>
                     body { font-family: Arial, sans-serif; padding: 20px; }
                     .event-group { margin-bottom: 30px; }
@@ -971,6 +989,41 @@ function printRegistrations() {
     printWindow.focus();
     printWindow.print();
     document.title = originalTitle;
+}
+
+function printEventRegistrations(eventName) {
+    const eventRegs = allRegistrations.filter(r => r.eventName === eventName);
+    if (eventRegs.length === 0) {
+        alert('No registrations for this event.');
+        return;
+    }
+
+    const printContents = `
+        <h2>${eventName} (${eventRegs.length})</h2>
+        <table border="1" cellpadding="5" cellspacing="0" style="border-collapse:collapse; width:100%;">
+            <thead>
+                <tr><th>Date</th><th>Details</th> </tr>
+            </thead>
+            <tbody>
+                ${eventRegs.map(r => `
+                    <tr>
+                        <td>${new Date(r.createdAt).toLocaleString()}</td>
+                        <td>${Object.entries(r.formData).map(([k,v]) => `<b>${k}:</b> ${v}`).join('<br>')}</td>
+                    </tr>
+                `).join('')}
+            </tbody>
+        </table>
+    `;
+
+    const win = window.open('', '_blank');
+    win.document.write(`
+        <html>
+            <head><title>${eventName} - Registrations</title></head>
+            <body>${printContents}</body>
+        </html>
+    `);
+    win.document.close();
+    win.print();
 }
 
 // ========== Home image upload trigger ==========
@@ -991,7 +1044,6 @@ document.getElementById('homeFileInput').addEventListener('change', async functi
 
 // Initial load
 window.onload = function(){
-    // Show home tab by default
     showTab('home-mgmt');
 };
     </script>
