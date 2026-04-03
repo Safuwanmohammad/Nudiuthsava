@@ -254,7 +254,7 @@ body {
 
 .event-grid {
     display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); /* bigger cards, fill section */
+    grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
     gap: 25px;
     padding: 20px;
     width: 100%;
@@ -271,10 +271,11 @@ body {
     opacity: 0;
     transform: translateY(40px);
     width: 100%;
+    cursor: pointer;  /* Make card clickable */
 }
 
 .event-box:hover {
-    transform: translateY(-12px) scale(1.02); /* added subtle scale */
+    transform: translateY(-12px) scale(1.02);
     box-shadow: 0 20px 40px rgba(0,0,0,0.2);
 }
 
@@ -294,28 +295,6 @@ body {
     font-size: 20px;
 }
 
-/* Enhanced button style */
-.event-box a {
-    display: inline-block;
-    margin-top: 10px;
-    padding: 12px 28px; /* slightly larger */
-    background: linear-gradient(45deg, #ff9800, #ff5722);
-    color: white;
-    text-decoration: none;
-    border-radius: 30px;
-    font-size: 15px;
-    font-weight: 600;
-    letter-spacing: 0.5px;
-    transition: all 0.3s ease;
-    box-shadow: 0 4px 10px rgba(255,87,34,0.3);
-}
-
-.event-box a:hover {
-    background: linear-gradient(45deg, #ff5722, #ff9800);
-    transform: scale(1.05);
-    box-shadow: 0 6px 15px rgba(255,87,34,0.4);
-}
-
 .event-box.show {
     opacity: 1;
     transform: translateY(0);
@@ -331,6 +310,19 @@ body {
         opacity: 1;
         transform: translateY(0);
     }
+}
+
+/* Single Register Button below events */
+.register-main-btn {
+    display: inline-block;
+    font-size: 1.2rem;
+    padding: 12px 35px;
+    background: linear-gradient(45deg, #ff9800, #ff5722);
+    box-shadow: 0 6px 15px rgba(255,87,34,0.4);
+}
+.register-main-btn:hover {
+    transform: scale(1.02);
+    background: linear-gradient(45deg, #ff5722, #ff9800);
 }
 
 @media (max-width: 992px) {
@@ -357,10 +349,6 @@ body {
     }
     .event-box h3 {
         font-size: 18px;
-    }
-    .event-box a {
-        padding: 8px 18px;
-        font-size: 13px;
     }
 }
 

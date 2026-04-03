@@ -8,18 +8,55 @@
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@600;700&family=Poppins:wght@300;400;500;600&display=swap" rel="stylesheet">
     <style>
-        .small-btn {
-            margin-top: 5px;
-            padding: 6px 12px;
+        /* Modal overlay */
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0; left: 0;
+            width: 100%; height: 100%;
+            background: rgba(0,0,0,0.6);
+            justify-content: center;
+            align-items: center;
+            z-index: 2000;
+        }
+        .modal-content {
+            background: white;
+            padding: 30px;
+            border-radius: 30px;
+            width: 90%;
+            max-width: 400px;
+            text-align: center;
+        }
+        .modal-content input {
+            width: 100%;
+            padding: 12px;
+            margin: 15px 0;
+            border-radius: 40px;
+            border: 1px solid #ccc;
+            font-size: 1rem;
+        }
+        .modal-content button {
             background: #8E0000;
             color: white;
             border: none;
-            border-radius: 20px;
+            padding: 10px 20px;
+            border-radius: 40px;
             cursor: pointer;
+            font-weight: 600;
+        }
+        .modal-content button:hover {
+            background: #C62828;
         }
         .info-message {
             font-size: 0.8rem;
             margin-top: 5px;
+        }
+        .form-group input, .form-group select, .form-group textarea {
+            width: 100%;
+            padding: 12px;
+            margin-top: 8px;
+            border-radius: 12px;
+            border: 1px solid #ccc;
         }
     </style>
 </head>
@@ -30,97 +67,78 @@
             <h1>Event Registration</h1>
 
             <form id="registrationForm">
-                <!-- Student Name -->
                 <div class="form-group">
                     <label>Student Participant's Name *</label>
                     <input type="text" name="studentName" required>
                 </div>
-
-                <!-- Student Email with OTP -->
                 <div class="form-group">
                     <label>Student's Email *</label>
                     <input type="email" name="studentEmail" id="studentEmail" required>
-                    <button type="button" id="sendOtpBtn" class="small-btn">Send OTP</button>
-                    <div id="otpSection" style="display:none;">
-                        <label>Enter OTP *</label>
-                        <input type="text" id="otpInput" required>
-                        <button type="button" id="verifyOtpBtn" class="small-btn">Verify OTP</button>
-                    </div>
-                    <div id="otpMessage" class="info-message"></div>
                 </div>
-
-                <!-- Student Phone (no OTP) -->
                 <div class="form-group">
                     <label>Student's Phone Number *</label>
                     <input type="tel" name="studentPhone" required>
                 </div>
-
-                <!-- College Name -->
                 <div class="form-group">
                     <label>College Name *</label>
                     <input type="text" name="collegeName" required>
                 </div>
-
-                <!-- Principal Name -->
                 <div class="form-group">
                     <label>Principal Name *</label>
                     <input type="text" name="principalName" required>
                 </div>
-
-                <!-- Principal Phone -->
                 <div class="form-group">
                     <label>Principal Phone Number *</label>
                     <input type="tel" name="principalPhone" required>
                 </div>
-
-                <!-- Course -->
                 <div class="form-group">
                     <label>Course *</label>
                     <input type="text" name="course" required>
                 </div>
-
-                <!-- Semester -->
                 <div class="form-group">
                     <label>Semester *</label>
                     <input type="text" name="semester" required>
                 </div>
-
-                <!-- Event Dropdown -->
                 <div class="form-group">
                     <label>Choose Event *</label>
                     <select name="eventName" id="eventSelect" required>
                         <option value="">-- Select an event --</option>
                     </select>
                 </div>
-
-                <!-- Dynamic field for Nudi Nruthya Sambhrama (hidden by default) -->
                 <div class="form-group" id="participantsField" style="display: none;">
-                    <label>Number of participants (minimum 6, maximum 12) *</label>
+                    <label>Number of participants (min 6, max 12) *</label>
                     <input type="number" name="participants" min="6" max="12" step="1">
                 </div>
-
-                <!-- Optional Message -->
                 <div class="form-group">
                     <label>Message (Optional)</label>
                     <textarea name="message" rows="4"></textarea>
                 </div>
-
                 <div class="form-buttons">
                     <button type="submit" class="submit-btn">Submit</button>
                     <button type="reset" class="reset-btn">Reset</button>
                 </div>
-
                 <div id="successMessage" class="success" style="display:none;">✅ Registration successful!</div>
                 <div id="errorMessage" class="error" style="display:none; color:#C62828;"></div>
             </form>
         </div>
     </section>
 
-    <script>
-        let otpVerified = false;
-        let userEmail = '';
+    <!-- OTP Modal -->
+    <div id="otpModal" class="modal">
+        <div class="modal-content">
+            <h3>Verify Your Email</h3>
+            <p>We've sent an OTP to <strong><span id="otpEmailDisplay"></span></strong></p>
+            <input type="text" id="otpInput" placeholder="Enter 6-digit OTP" autocomplete="off">
+            <button id="modalVerifyBtn">Verify & Register</button>
+            <div id="modalMessage" style="margin-top: 10px; color: red;"></div>
+        </div>
+    </div>
 
-        // Fetch events for dropdown
+    <script>
+        let pendingFormData = null;
+        let currentEmail = '';
+
+        // Load events into dropdown
         async function loadEventsForDropdown() {
             try {
                 const res = await fetch('/api/events');
@@ -135,18 +153,19 @@
                     select.appendChild(option);
                 });
 
+                // Pre-select from URL parameter
                 const urlParams = new URLSearchParams(window.location.search);
                 const preselected = urlParams.get('event');
                 if (preselected) {
                     const option = Array.from(select.options).find(opt => opt.value === preselected);
                     if (option) {
                         option.selected = true;
-                        select.dispatchEvent(new Event('change'));
+                        handleEventChange();
                     }
                 }
             } catch (err) {
-                console.error('Error loading events:', err);
-                document.getElementById('errorMessage').textContent = 'Could not load events. Please try again later.';
+                console.error(err);
+                document.getElementById('errorMessage').textContent = 'Could not load events.';
                 document.getElementById('errorMessage').style.display = 'block';
             }
         }
@@ -156,7 +175,6 @@
             const selected = select.value;
             const participantsDiv = document.getElementById('participantsField');
             const participantsInput = participantsDiv.querySelector('input[name="participants"]');
-            
             if (selected === 'Nudi Nruthya Sambhrama') {
                 participantsDiv.style.display = 'block';
                 participantsInput.required = true;
@@ -167,70 +185,15 @@
             }
         }
 
-        // OTP handlers
-        document.getElementById('sendOtpBtn').addEventListener('click', async () => {
-            const email = document.getElementById('studentEmail').value.trim();
-            if (!email) {
-                alert('Please enter email address');
-                return;
-            }
-            userEmail = email;
-            try {
-                const res = await fetch('/api/send-otp', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ email })
-                });
-                if (res.ok) {
-                    document.getElementById('otpSection').style.display = 'block';
-                    document.getElementById('otpMessage').innerHTML = 'OTP sent to your email!';
-                } else {
-                    alert('Failed to send OTP');
-                }
-            } catch (err) {
-                console.error(err);
-                alert('Error sending OTP');
-            }
-        });
+        document.getElementById('eventSelect').addEventListener('change', handleEventChange);
 
-        document.getElementById('verifyOtpBtn').addEventListener('click', async () => {
-            const otp = document.getElementById('otpInput').value.trim();
-            if (!otp) {
-                alert('Enter OTP');
-                return;
-            }
-            try {
-                const res = await fetch('/api/verify-otp', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ email: userEmail, otp })
-                });
-                if (res.ok) {
-                    otpVerified = true;
-                    document.getElementById('otpMessage').innerHTML = '<span style="color:green;">✔ Verified</span>';
-                    document.getElementById('verifyOtpBtn').disabled = true;
-                } else {
-                    const data = await res.json();
-                    alert(data.error || 'Verification failed');
-                }
-            } catch (err) {
-                console.error(err);
-                alert('Error verifying OTP');
-            }
-        });
-
-        // Form submission with OTP check
+        // Step 1: On form submit, send OTP and show modal
         document.getElementById('registrationForm').addEventListener('submit', async (e) => {
             e.preventDefault();
-            if (!otpVerified) {
-                alert('Please verify your email with OTP first.');
-                return;
-            }
-
             const formData = new FormData(e.target);
             const data = Object.fromEntries(formData.entries());
 
-            // Basic validation for participants range
+            // Validate participants for specific event
             if (data.eventName === 'Nudi Nruthya Sambhrama') {
                 const participants = parseInt(data.participants, 10);
                 if (isNaN(participants) || participants < 6 || participants > 12) {
@@ -239,39 +202,91 @@
                 }
             }
 
+            if (!data.studentEmail) {
+                alert('Email is required');
+                return;
+            }
+
+            pendingFormData = data;
+            currentEmail = data.studentEmail;
+            document.getElementById('otpEmailDisplay').innerText = currentEmail;
+
             try {
-                const res = await fetch('/api/registrations', {
+                const res = await fetch('/api/send-otp', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({
-                        eventName: data.eventName,
-                        formData: data
-                    })
+                    body: JSON.stringify({ email: currentEmail })
                 });
-
                 if (res.ok) {
-                    document.getElementById('successMessage').style.display = 'block';
-                    e.target.reset();
-                    document.getElementById('participantsField').style.display = 'none';
-                    // Reset OTP state
-                    otpVerified = false;
-                    document.getElementById('otpSection').style.display = 'none';
-                    document.getElementById('otpMessage').innerHTML = '';
-                    document.getElementById('verifyOtpBtn').disabled = false;
-                    setTimeout(() => {
-                        document.getElementById('successMessage').style.display = 'none';
-                    }, 3000);
+                    document.getElementById('otpModal').style.display = 'flex';
+                    document.getElementById('modalMessage').innerText = '';
+                    document.getElementById('otpInput').value = '';
                 } else {
-                    const err = await res.json();
-                    alert('Registration failed: ' + (err.error || 'Unknown error'));
+                    alert('Failed to send OTP. Please try again.');
                 }
             } catch (err) {
                 console.error(err);
-                alert('Error submitting form. Please try again.');
+                alert('Error sending OTP');
             }
         });
 
-        document.getElementById('eventSelect').addEventListener('change', handleEventChange);
+        // Step 2: Verify OTP and then register
+        document.getElementById('modalVerifyBtn').addEventListener('click', async () => {
+            const otp = document.getElementById('otpInput').value.trim();
+            if (!otp) {
+                document.getElementById('modalMessage').innerText = 'Please enter OTP';
+                return;
+            }
+
+            try {
+                const verifyRes = await fetch('/api/verify-otp', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ email: currentEmail, otp })
+                });
+
+                if (!verifyRes.ok) {
+                    const errData = await verifyRes.json();
+                    document.getElementById('modalMessage').innerText = errData.error || 'Invalid OTP';
+                    return;
+                }
+
+                // OTP verified – now submit registration
+                const regRes = await fetch('/api/registrations', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        eventName: pendingFormData.eventName,
+                        formData: pendingFormData
+                    })
+                });
+
+                if (regRes.ok) {
+                    document.getElementById('otpModal').style.display = 'none';
+                    document.getElementById('successMessage').style.display = 'block';
+                    document.getElementById('registrationForm').reset();
+                    document.getElementById('participantsField').style.display = 'none';
+                    setTimeout(() => {
+                        document.getElementById('successMessage').style.display = 'none';
+                    }, 4000);
+                } else {
+                    const err = await regRes.json();
+                    document.getElementById('modalMessage').innerText = err.error || 'Registration failed';
+                }
+            } catch (err) {
+                console.error(err);
+                document.getElementById('modalMessage').innerText = 'Server error. Please try again.';
+            }
+        });
+
+        // Close modal if clicked outside
+        window.onclick = function(event) {
+            const modal = document.getElementById('otpModal');
+            if (event.target === modal) {
+                modal.style.display = 'none';
+            }
+        };
+
         loadEventsForDropdown();
     </script>
 </body>

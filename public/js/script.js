@@ -246,12 +246,11 @@ async function loadHomeImages() {
     }
 }
 
-// ===== MODIFIED FUNCTION: now links to unified register.html with event name =====
+// ===== UPDATED loadEvents – no register button inside cards, entire card clickable =====
 async function loadEvents() {
     console.log('loadEvents() started');
     try {
         const res = await fetch('/api/events');
-        console.log('Fetch response status:', res.status);
         if (!res.ok) throw new Error('Failed to fetch events');
         const events = await res.json();
         console.log('Events received:', events);
@@ -262,30 +261,32 @@ async function loadEvents() {
             return;
         }
 
-        container.innerHTML = ''; // clear any previous
+        container.innerHTML = '';
 
         if (events.length === 0) {
-            console.log('No dynamic events to display');
             container.innerHTML = '<p style="text-align:center;">No additional events at this time.</p>';
             return;
         }
 
         events.forEach(ev => {
-            console.log('Creating card for:', ev.title);
             const box = document.createElement('div');
             box.className = 'event-box dynamic-event';
+            box.style.cursor = 'pointer';
+            // Make entire card clickable
+            box.addEventListener('click', () => {
+                window.location.href = `/register.html?event=${encodeURIComponent(ev.title)}`;
+            });
+
             const imgUrl = ev.imageUrl || '/images/placeholder.png';
             box.innerHTML = `
                 <img src="${imgUrl}" alt="${ev.title}" onerror="this.src='/images/placeholder.png'">
                 <h3>${ev.title}</h3>
-                ${ev.hasForm ? `<a href="/register.html?event=${encodeURIComponent(ev.title)}" class="btn">Register Now</a>` : ''}
             `;
             container.appendChild(box);
         });
 
         // Trigger scroll animation for new boxes
         window.dispatchEvent(new Event('scroll'));
-        console.log('Event cards appended and scroll event dispatched');
     } catch (err) {
         console.error('❌ Error in loadEvents:', err);
     }
