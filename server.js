@@ -83,7 +83,7 @@ const HomeImage = mongoose.model("HomeImage", homeImageSchema);
 const eventSchema = new mongoose.Schema({
   title: String,
   imageUrl: String,
-  registerPage: String,
+  registerPage: String,   // external URL (Google Form)
   hasForm: Boolean,
   createdAt: { type: Date, default: Date.now },
 });
@@ -243,13 +243,19 @@ app.delete("/api/home-images/:id", requireAdmin, async (req, res) => {
   res.json({ message: "Deleted" });
 });
 
-// ====================== EVENTS ======================
+// ====================== EVENTS (UPDATED) ======================
 app.post("/api/events", requireAdmin, upload.single("image"), async (req, res) => {
   try {
-    const { title, hasForm } = req.body;
+    const { title, hasForm, registerPage } = req.body;
     let imageUrl = null;
     if (req.file) imageUrl = await uploadFileToSupabase(req.file, 'events');
-    const event = new Event({ title, registerPage: "", hasForm: hasForm === "true", imageUrl });
+
+    const event = new Event({
+      title,
+      registerPage: registerPage || "",
+      hasForm: hasForm === "true" || !!registerPage,
+      imageUrl
+    });
     await event.save();
     res.json(event);
   } catch (err) {
@@ -264,9 +270,14 @@ app.get("/api/events", async (req, res) => {
 
 app.put("/api/events/:id", requireAdmin, upload.single("image"), async (req, res) => {
   try {
-    const { title, hasForm } = req.body;
-    const updateData = { title, hasForm: hasForm === "true" };
+    const { title, hasForm, registerPage } = req.body;
+    const updateData = {
+      title,
+      registerPage: registerPage || "",
+      hasForm: hasForm === "true" || !!registerPage
+    };
     if (req.file) updateData.imageUrl = await uploadFileToSupabase(req.file, 'events');
+
     const event = await Event.findByIdAndUpdate(req.params.id, updateData, { new: true });
     res.json(event);
   } catch (err) {

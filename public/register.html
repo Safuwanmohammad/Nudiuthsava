@@ -8,7 +8,6 @@
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@600;700&family=Poppins:wght@300;400;500;600&display=swap" rel="stylesheet">
     <style>
-        /* Modal overlay */
         .modal {
             display: none;
             position: fixed;
@@ -44,19 +43,29 @@
             cursor: pointer;
             font-weight: 600;
         }
-        .modal-content button:hover {
-            background: #C62828;
-        }
-        .info-message {
-            font-size: 0.8rem;
-            margin-top: 5px;
-        }
+        .modal-content button:hover { background: #C62828; }
+        .info-message { font-size: 0.8rem; margin-top: 5px; }
         .form-group input, .form-group select, .form-group textarea {
             width: 100%;
             padding: 12px;
             margin-top: 8px;
             border-radius: 12px;
             border: 1px solid #ccc;
+        }
+        .external-link-btn {
+            display: inline-block;
+            background: #8E0000;
+            color: white;
+            padding: 12px 30px;
+            border-radius: 40px;
+            text-decoration: none;
+            font-weight: 600;
+            font-size: 1.2rem;
+            transition: 0.3s;
+        }
+        .external-link-btn:hover {
+            background: #C62828;
+            transform: scale(1.02);
         }
     </style>
 </head>
@@ -67,63 +76,75 @@
             <h1>Event Registration</h1>
 
             <form id="registrationForm">
-                <div class="form-group">
-                    <label>Student Participant's Name *</label>
-                    <input type="text" name="studentName" required>
+                <!-- Internal form fields (hidden if external link) -->
+                <div id="internalFormFields">
+                    <div class="form-group">
+                        <label>Student Participant's Name *</label>
+                        <input type="text" name="studentName" required>
+                    </div>
+                    <div class="form-group">
+                        <label>Student's Email *</label>
+                        <input type="email" name="studentEmail" id="studentEmail" required>
+                    </div>
+                    <div class="form-group">
+                        <label>Student's Phone Number *</label>
+                        <input type="tel" name="studentPhone" required>
+                    </div>
+                    <div class="form-group">
+                        <label>College Name *</label>
+                        <input type="text" name="collegeName" required>
+                    </div>
+                    <div class="form-group">
+                        <label>Principal Name *</label>
+                        <input type="text" name="principalName" required>
+                    </div>
+                    <div class="form-group">
+                        <label>Principal Phone Number *</label>
+                        <input type="tel" name="principalPhone" required>
+                    </div>
+                    <div class="form-group">
+                        <label>Course *</label>
+                        <input type="text" name="course" required>
+                    </div>
+                    <div class="form-group">
+                        <label>Semester *</label>
+                        <input type="text" name="semester" required>
+                    </div>
+                    <div class="form-group">
+                        <label>Choose Event *</label>
+                        <select name="eventName" id="eventSelect" required>
+                            <option value="">-- Select an event --</option>
+                        </select>
+                    </div>
+                    <div class="form-group" id="participantsField" style="display: none;">
+                        <label>Number of participants (min 6, max 12) *</label>
+                        <input type="number" name="participants" min="6" max="12" step="1">
+                    </div>
+                    <div class="form-group">
+                        <label>Message (Optional)</label>
+                        <textarea name="message" rows="4"></textarea>
+                    </div>
+                    <div class="form-buttons">
+                        <button type="submit" class="submit-btn">Submit</button>
+                        <button type="reset" class="reset-btn">Reset</button>
+                    </div>
                 </div>
-                <div class="form-group">
-                    <label>Student's Email *</label>
-                    <input type="email" name="studentEmail" id="studentEmail" required>
+
+                <!-- External link container (hidden by default) -->
+                <div id="externalLinkContainer" style="display: none; text-align: center; margin-top: 30px;">
+                    <p>This event uses an external registration form.</p>
+                    <a id="externalLinkButton" href="#" target="_blank" class="external-link-btn">
+                        <i class="fas fa-external-link-alt"></i> Register via Google Form
+                    </a>
                 </div>
-                <div class="form-group">
-                    <label>Student's Phone Number *</label>
-                    <input type="tel" name="studentPhone" required>
-                </div>
-                <div class="form-group">
-                    <label>College Name *</label>
-                    <input type="text" name="collegeName" required>
-                </div>
-                <div class="form-group">
-                    <label>Principal Name *</label>
-                    <input type="text" name="principalName" required>
-                </div>
-                <div class="form-group">
-                    <label>Principal Phone Number *</label>
-                    <input type="tel" name="principalPhone" required>
-                </div>
-                <div class="form-group">
-                    <label>Course *</label>
-                    <input type="text" name="course" required>
-                </div>
-                <div class="form-group">
-                    <label>Semester *</label>
-                    <input type="text" name="semester" required>
-                </div>
-                <div class="form-group">
-                    <label>Choose Event *</label>
-                    <select name="eventName" id="eventSelect" required>
-                        <option value="">-- Select an event --</option>
-                    </select>
-                </div>
-                <div class="form-group" id="participantsField" style="display: none;">
-                    <label>Number of participants (min 6, max 12) *</label>
-                    <input type="number" name="participants" min="6" max="12" step="1">
-                </div>
-                <div class="form-group">
-                    <label>Message (Optional)</label>
-                    <textarea name="message" rows="4"></textarea>
-                </div>
-                <div class="form-buttons">
-                    <button type="submit" class="submit-btn">Submit</button>
-                    <button type="reset" class="reset-btn">Reset</button>
-                </div>
+
                 <div id="successMessage" class="success" style="display:none;">✅ Registration successful!</div>
                 <div id="errorMessage" class="error" style="display:none; color:#C62828;"></div>
             </form>
         </div>
     </section>
 
-    <!-- OTP Modal -->
+    <!-- OTP Modal (only for internal form) -->
     <div id="otpModal" class="modal">
         <div class="modal-content">
             <h3>Verify Your Email</h3>
@@ -137,23 +158,24 @@
     <script>
         let pendingFormData = null;
         let currentEmail = '';
+        let eventsList = [];
 
         // Load events into dropdown
         async function loadEventsForDropdown() {
             try {
                 const res = await fetch('/api/events');
                 if (!res.ok) throw new Error('Failed to load events');
-                const events = await res.json();
+                eventsList = await res.json();
                 const select = document.getElementById('eventSelect');
                 select.innerHTML = '<option value="">-- Select an event --</option>';
-                events.forEach(ev => {
+                eventsList.forEach(ev => {
                     const option = document.createElement('option');
                     option.value = ev.title;
                     option.textContent = ev.title;
+                    option.dataset.registerPage = ev.registerPage || '';
                     select.appendChild(option);
                 });
 
-                // Pre-select from URL parameter
                 const urlParams = new URLSearchParams(window.location.search);
                 const preselected = urlParams.get('event');
                 if (preselected) {
@@ -172,24 +194,43 @@
 
         function handleEventChange() {
             const select = document.getElementById('eventSelect');
-            const selected = select.value;
-            const participantsDiv = document.getElementById('participantsField');
-            const participantsInput = participantsDiv.querySelector('input[name="participants"]');
-            if (selected === 'Nudi Nruthya Sambhrama') {
-                participantsDiv.style.display = 'block';
-                participantsInput.required = true;
+            const selectedOption = select.options[select.selectedIndex];
+            const externalUrl = selectedOption ? selectedOption.dataset.registerPage : '';
+            const internalDiv = document.getElementById('internalFormFields');
+            const externalDiv = document.getElementById('externalLinkContainer');
+
+            if (externalUrl && externalUrl.trim() !== '') {
+                internalDiv.style.display = 'none';
+                externalDiv.style.display = 'block';
+                document.getElementById('externalLinkButton').href = externalUrl;
             } else {
-                participantsDiv.style.display = 'none';
-                participantsInput.required = false;
-                participantsInput.value = '';
+                internalDiv.style.display = 'block';
+                externalDiv.style.display = 'none';
+                // Show participants field only for specific internal event
+                const selectedEvent = eventsList.find(ev => ev.title === select.value);
+                const participantsDiv = document.getElementById('participantsField');
+                if (selectedEvent && selectedEvent.title === 'Nudi Nruthya Sambhrama') {
+                    participantsDiv.style.display = 'block';
+                    participantsDiv.querySelector('input').required = true;
+                } else {
+                    participantsDiv.style.display = 'none';
+                    if (participantsDiv.querySelector('input')) participantsDiv.querySelector('input').required = false;
+                }
             }
         }
 
         document.getElementById('eventSelect').addEventListener('change', handleEventChange);
 
-        // Step 1: On form submit, send OTP and show modal
+        // On internal form submit: OTP then registration
         document.getElementById('registrationForm').addEventListener('submit', async (e) => {
             e.preventDefault();
+
+            // If external container is visible, do nothing (should not happen because form is hidden)
+            if (document.getElementById('externalLinkContainer').style.display === 'block') {
+                alert('This event uses an external registration link. Please use the button above.');
+                return;
+            }
+
             const formData = new FormData(e.target);
             const data = Object.fromEntries(formData.entries());
 
@@ -230,7 +271,6 @@
             }
         });
 
-        // Step 2: Verify OTP and then register
         document.getElementById('modalVerifyBtn').addEventListener('click', async () => {
             const otp = document.getElementById('otpInput').value.trim();
             if (!otp) {
@@ -251,7 +291,7 @@
                     return;
                 }
 
-                // OTP verified – now submit registration
+                // OTP verified – submit registration
                 const regRes = await fetch('/api/registrations', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
@@ -279,12 +319,9 @@
             }
         });
 
-        // Close modal if clicked outside
         window.onclick = function(event) {
             const modal = document.getElementById('otpModal');
-            if (event.target === modal) {
-                modal.style.display = 'none';
-            }
+            if (event.target === modal) modal.style.display = 'none';
         };
 
         loadEventsForDropdown();
